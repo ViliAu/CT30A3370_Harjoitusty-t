@@ -46,6 +46,17 @@ void push(Node** stack_head, Node* node) {
     *stack_head = node;
 }
 
+Node* pop(Node** stack_head) {
+    if (stack_head == NULL || *stack_head == NULL) {
+        return NULL;
+    }
+    Node* new_head = (*stack_head)->next;
+    Node* popped_node = (*stack_head);
+    (*stack_head)->next = NULL;
+    (*stack_head) = new_head;
+    return popped_node;
+}
+
 void free_node(Node* node, bool line_needs_free) {
     /* Free's the malloc'd node */
     if (node == NULL) {
