@@ -8,8 +8,9 @@ Sources: -
     #include <stdio.h>
     #include <stdbool.h>
     #include <stdlib.h>
+    /* Currently only required for the unit tests */
     #include <string.h>
-    /* UNIT TEST DECLARATIONS, LATER MOVED TO SEPARATE FILE */
+    /* UNIT TEST DECLARATIONS, LATER MOVED TO SEPARATE HEADER */
     void test_push();
     void test_new_node();
     void test_pop();
