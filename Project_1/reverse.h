@@ -6,6 +6,7 @@ Sources: -
 #ifndef REVERSE_H
 #define REVERSE_H
     #include <stdio.h>
+    #include <stdbool.h>
     #include <stdlib.h>
     /* Stack structure's node */
     typedef struct Node {
@@ -14,11 +15,11 @@ Sources: -
     } Node;
     /* Dynamic memory */
     Node* new_node();
-    void push(Node** node, Node** stack_head);
-    Node* pop(Node** stack_head);
-    void free_node(Node** node);
+    void push(Node**, Node**);
+    Node* pop(Node**);
+    void free_node(Node*, bool);
     /* File reading */
-    char** read_lines(FILE* file_stream);
+    char** read_lines(FILE*);
     /* File writing */
-    void write(FILE* file_stream, char** lines);
+    void write(FILE*, char**);
 #endif
