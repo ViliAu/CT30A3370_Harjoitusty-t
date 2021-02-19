@@ -11,6 +11,7 @@ void test_new_node() {
     Node* n = new_node();
     if (n == NULL || n->line != NULL || n->next != NULL) {
         fprintf(stderr, "error: new_node unit test failed\n");
+        exit(1);
     }
 }
 
@@ -20,6 +21,40 @@ void test_push() {
     push(NULL, new_node());
     Node* stack_head = new_node();
     push(&stack_head, NULL);
+}
+
+void test_pop() {
+    Node* stack_head = new_node(), *n;
+    stack_head->line = malloc(sizeof(char) * 25);
+    strcpy(stack_head->line, "Original stack head");
+    int i;
+    char sample_text_arr[5][2] = {"1", "2", "3", "4", "5"};
+
+    for (i = 0; i < 5; i++) {
+        n = new_node();
+        n->line = malloc(sizeof(char) * 25);
+        strcpy(n->line, sample_text_arr[i]);
+        push(&stack_head, n);
+    }
+
+    for (i = 0; i < 5; i++) {
+        n = pop(&stack_head);
+        if (strcmp(n->line, sample_text_arr[4 - i]) != 0) {
+            fprintf(stderr, "error: test_pop unit test failed\n");
+            exit(1);
+        }
+        free(n->line);
+        free(n);
+    }
+
+    n = pop(&stack_head);
+    free(stack_head->line);
+    free(stack_head);
+
+    if (pop(NULL) != NULL) {
+        fprintf(stderr, "error: test_pop unit test failed\n");
+        exit(1);
+    }
 }
 
 Node* new_node() {
@@ -49,6 +84,9 @@ void push(Node** stack_head, Node* node) {
 Node* pop(Node** stack_head) {
     if (stack_head == NULL || *stack_head == NULL) {
         return NULL;
+    }
+    if ((*stack_head)->next == NULL) {
+        return *stack_head;
     }
     Node* new_head = (*stack_head)->next;
     Node* popped_node = (*stack_head);
