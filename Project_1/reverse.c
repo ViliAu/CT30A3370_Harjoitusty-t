@@ -29,14 +29,14 @@ void test_pop() {
     strcpy(stack_head->line, "Original stack head");
     int i;
     char sample_text_arr[5][2] = {"1", "2", "3", "4", "5"};
-
+    /* Push five nodes to the stack */
     for (i = 0; i < 5; i++) {
         n = new_node();
         n->line = malloc(sizeof(char) * 25);
         strcpy(n->line, sample_text_arr[i]);
         push(&stack_head, n);
     }
-
+    /* Pop them and check that they are reversed */
     for (i = 0; i < 5; i++) {
         n = pop(&stack_head);
         if (strcmp(n->line, sample_text_arr[4 - i]) != 0) {
@@ -46,8 +46,12 @@ void test_pop() {
         free(n->line);
         free(n);
     }
-
+    /* The original stack head should be the last one */
     n = pop(&stack_head);
+    if (strcmp(n->line, "Original stack head") != 0) {
+        fprintf(stderr, "error: test_pop unit test failed\n");
+        exit(1);
+    }
     free(stack_head->line);
     free(stack_head);
 
