@@ -8,6 +8,9 @@ Sources: -
     #include <stdio.h>
     #include <stdbool.h>
     #include <stdlib.h>
+    /* UNIT TEST DECLARATIONS, LATER MOVED TO SEPARATE FILE */
+    void test_push();
+    void test_new_node();
     /* Stack structure's node */
     typedef struct Node {
         char* line;
