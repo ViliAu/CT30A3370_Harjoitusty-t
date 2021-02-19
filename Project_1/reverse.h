@@ -15,7 +15,7 @@ Sources: -
     } Node;
     /* Dynamic memory */
     Node* new_node();
-    void push(Node**, Node**);
+    void push(Node**, Node*);
     Node* pop(Node**);
     void free_node(Node*, bool);
     /* File reading */
