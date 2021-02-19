@@ -82,12 +82,15 @@ void push(Node** stack_head, Node* node) {
 }
 
 Node* pop(Node** stack_head) {
+    /* Removes and returns the last pushed node from the stack,
+        modifies stack_head argument to match the new head. */
     if (stack_head == NULL || *stack_head == NULL) {
         return NULL;
     }
     if ((*stack_head)->next == NULL) {
         return *stack_head;
     }
+    /* Move the stack head to the second last element and return last pushed (remove its link to the stack) */
     Node* new_head = (*stack_head)->next;
     Node* popped_node = (*stack_head);
     (*stack_head)->next = NULL;
