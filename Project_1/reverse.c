@@ -21,6 +21,14 @@ Node* new_node() {
     return n;
 }
 
+void free_node(Node* node, bool line_needs_free) {
+    /* Free's the malloc'd node */
+    if (line_needs_free == true) {
+        free(node->line);
+    }
+    free(node);
+}
+
 int main (void) {
     return 0;
 }
