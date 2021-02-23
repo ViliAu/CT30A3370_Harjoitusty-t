@@ -25,7 +25,7 @@ Sources: -
     Node* pop(Node**);
     void free_node(Node*, bool);
     /* File reading */
-    char** read_lines(FILE*);
+    char** read_lines(char* file_name);
     /* File writing */
     void write(FILE*, char**);
 #endif

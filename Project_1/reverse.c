@@ -1,6 +1,6 @@
 /*
 Authors: Jani Heinikoski, Vili Huusko
-Last modified: 19.02.2021
+Last modified: 23.02.2021
 Sources: -
 */
 #include "reverse.h"
@@ -113,6 +113,28 @@ void free_node(Node* node, bool line_needs_free) {
     free(node);
 }
 
-int main (void) {
+char** read_lines(char* file_name) {
+    FILE* file_to_read = NULL;
+    if ((file_to_read = fopen(file_name, "r")) == NULL) {
+        fprintf(stderr, "error: cannot open file '%s'\n", file_name);
+        exit(1);
+    }
+
+    char* line;
+    char** file_lines;
+    size_t len = 0;
+    ssize_t chars_read = 0;
+    while ((chars_read = getline(&line, &len, file_to_read)) != -1) {
+        printf("%s", line);
+        realloc(file_lines, sizeof(line));
+        strcpy(*file_lines, line);
+    }
+    fclose(file_to_read);
+    return file_lines;
+}
+
+int main (int argc, char** argv) {
+    read_lines("test.txt");
+    getchar();
     return 0;
 }
