@@ -5,6 +5,7 @@ Sources: -
 */
 #ifndef REVERSE_H
 #define REVERSE_H
+    #define _GNU_SOURCE
     #include <stdio.h>
     #include <stdbool.h>
     #include <stdlib.h>
@@ -14,6 +15,7 @@ Sources: -
     void test_push();
     void test_new_node();
     void test_pop();
+    void test_file_read();
     /* Stack structure's node */
     typedef struct Node {
         char* line;
@@ -24,8 +26,8 @@ Sources: -
     void push(Node**, Node*);
     Node* pop(Node**);
     void free_node(Node*, bool);
-    /* File reading */
-    char** read_lines(char* file_name);
-    /* File writing */
-    void write(FILE*, char**);
+    /* Stack input */
+    void read_input(char* file_name, Node** head);
+    /* Stack output */
+    void print_stack(char* file_name, Node** tail);
 #endif

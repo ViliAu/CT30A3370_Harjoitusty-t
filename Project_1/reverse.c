@@ -61,6 +61,20 @@ void test_pop() {
     }
 }
 
+void test_file_read() {
+    Node* head = new_node();
+    Node* n;
+    read_input("test_original.txt", &head);
+    while ((n = pop(&head)) != NULL) {
+        if(n->line == NULL)
+            break;
+        fprintf(stdout, "%s", n->line);
+    }
+}
+
+/* END UNIT TESTS */
+
+
 Node* new_node() {
     /* Used to malloc Nodes for the linked list */
     Node* n = malloc(sizeof(Node));
@@ -113,28 +127,67 @@ void free_node(Node* node, bool line_needs_free) {
     free(node);
 }
 
-char** read_lines(char* file_name) {
-    FILE* file_to_read = NULL;
-    if ((file_to_read = fopen(file_name, "r")) == NULL) {
-        fprintf(stderr, "error: cannot open file '%s'\n", file_name);
-        exit(1);
-    }
-
+/* Reads the lines from an input (file) and pushes them to the stack */
+void read_input(char* file_name, Node** head) {
     char* line;
-    char** file_lines;
+    Node* node;
     size_t len = 0;
     ssize_t chars_read = 0;
-    while ((chars_read = getline(&line, &len, file_to_read)) != -1) {
-        printf("%s", line);
-        realloc(file_lines, sizeof(line));
-        strcpy(*file_lines, line);
+    /* Choose the file to read based on the file name */
+    FILE* file_to_read;
+    if (strcmp(file_name, "stdin")) {
+        if ((file_to_read = fopen(file_name, "r")) == NULL) {
+            fprintf(stderr, "error: cannot open file '%s'\n", file_name);
+            exit(1);
+        }
     }
-    fclose(file_to_read);
-    return file_lines;
+    else {
+        file_to_read = stdin;
+    }
+    while ((chars_read = getline(&line, &len, file_to_read)) != -1) {
+        /* Break user input on an empty line */
+        if (!strcmp(file_name, "stdin") && !strcmp(line, "\n"))
+            break;
+        node = new_node();
+        node->line = malloc(sizeof(char) * sizeof(line));
+        strcpy(node->line, line);
+        push(head, node);
+    }
+    free(line);
+    /* Close the file if not stdin */
+    if (strcmp(file_name, "stdin"))
+        fclose(file_to_read);
+}
+
+
+
+void print_stack(char* file_name, Node** tail) {
+    Node* node;
+    /* Handle output file */
+    FILE* out;
+    if (strcmp(file_name, "stdout")) {
+        if ((out= fopen(file_name, "w")) == NULL) {
+            fprintf(stderr, "error: cannot open file '%s'\n", file_name);
+            exit(1);
+        }
+    }
+    else {
+        out = stdout;
+    }
+    while((node = pop(tail)) != NULL) {
+        if (node->line == NULL)
+            break;
+        fprintf(out, "%s", node->line);
+    }
+    if (strcmp(file_name, "stdin"))
+        fclose(out);
 }
 
 int main (int argc, char** argv) {
-    read_lines("test.txt");
-    getchar();
+    Node* head = new_node();
+    char* file_name = ((argc < 2) ? "stdin" : argv[1]);
+    read_input(file_name, &head);
+    file_name = ((argc < 3) ? "stdout" : argv[2]);
+    print_stack(file_name, &head);
     return 0;
 }
