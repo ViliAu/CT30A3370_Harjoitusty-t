@@ -184,6 +184,12 @@ void print_stack(char* file_name, Node** tail) {
 }
 
 int main (int argc, char** argv) {
+    if (argc > 2) {
+        if (!strcmp(argv[1], argv[2])) {
+            fprintf(stderr, "Input and output file must differ\n");
+            exit(1);
+        }
+    }
     Node* head = new_node();
     char* file_name = ((argc < 2) ? "stdin" : argv[1]);
     read_input(file_name, &head);
