@@ -11,3 +11,13 @@ Sources:
 
 #define READ_BINARY "rb"
 #define WRITE_BINARY "wb"
+
+/* Wrapper with error handling for fopen */
+FILE* open_file(char* filename, char* mode) {
+    FILE* fp = fopen(filename, mode);
+    if (!fp) {
+        fprintf(stderr, "Error opening the file: %s with mode %s\n", filename, mode);
+        exit(1);
+    }
+    return fp;
+}
