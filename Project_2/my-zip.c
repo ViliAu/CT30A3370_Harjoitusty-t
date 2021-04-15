@@ -79,3 +79,15 @@ void zip(FILE* src, FILE* dest) {
         exit(1);
     } 
 }
+
+int main(int argc, char** argv) {
+    if (argc <= 1) {
+        puts("Usage: my-zip: file1 [file2 ...]");
+        exit(1);
+    } else {
+        for (argv++; *argv != NULL; argv++) {
+            puts(*argv);
+        }
+    }
+    return 0;
+}
