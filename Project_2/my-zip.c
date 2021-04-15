@@ -22,6 +22,21 @@ FILE* open_file(char* filename, char* mode) {
     return fp;
 }
 
+/* Writes the four_byte_uint into dest as a four byte block in binary format.
+    FILE* must be in wb mode (e.g., get FILE* using fopen() beforehand) */
+void write_unsigned_int(FILE* dest, uint32_t four_byte_uint) {
+    if (!dest) {
+        fprintf(stderr, "Destination was null.\n");
+        exit(1);
+    }
+    size_t elems_written = fwrite(&four_byte_uint, 4, 1, dest);
+    if (elems_written != 1) {
+        /* Perror used because global errno was set by fwrite */
+        perror("Error in writing to file in write_unsigned_int.");
+        exit(1);
+    }
+}
+
 bool supported_by_ascii(int c) {
     return (c >= 0 && c <= 127);
 }
