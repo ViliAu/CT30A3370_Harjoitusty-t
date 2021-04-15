@@ -21,3 +21,7 @@ FILE* open_file(char* filename, char* mode) {
     }
     return fp;
 }
+
+bool supported_by_ascii(int c) {
+    return (c >= 0 && c <= 127);
+}
