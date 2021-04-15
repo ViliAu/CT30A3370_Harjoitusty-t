@@ -12,6 +12,13 @@ Sources:
 #define READ_BINARY "rb"
 #define WRITE_BINARY "wb"
 
+FILE* open_file(char*, char*);
+void write_unsigned_int(FILE*, uint32_t);
+bool supported_by_ascii(int);
+void check_src_dest(FILE*, FILE*);
+void zip(FILE*, FILE*);
+
+
 /* Wrapper with error handling for fopen */
 FILE* open_file(char* filename, char* mode) {
     FILE* fp = fopen(filename, mode);
