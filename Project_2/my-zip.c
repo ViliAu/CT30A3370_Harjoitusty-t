@@ -40,3 +40,35 @@ void write_unsigned_int(FILE* dest, uint32_t four_byte_uint) {
 bool supported_by_ascii(int c) {
     return (c >= 0 && c <= 127);
 }
+
+void check_src_dest(FILE* src, FILE* dest) {
+    if (!src && dest) {
+        fclose(dest);
+        fprintf(stderr, "Src arg was NULL.\n");
+    } else if (src && !dest) {
+        fclose(src);
+        fprintf(stderr, "Dest arg was NULL.\n");
+    } else if (!src && !dest) {
+        fprintf(stderr, "Src and dest args were NULL.\n");
+    } else {
+        return;
+    }
+    exit(1);
+}
+
+void zip(FILE* src, FILE* dest) {
+    check_src_dest(src, dest);
+    int rc;
+    while ((rc = fgetc(src)) != EOF) {
+        putc(rc, dest); /* TODO For testing purposes, remove on deployment */
+        if (supported_by_ascii(rc)) {
+            write_unsigned_int(dest, rc);
+        } else {
+            fprintf(stderr, "Encountered non-ASCII supported character: %c, omitting...\n", rc);
+        }
+    }
+    if (ferror(src) != 0) {
+        perror("I/O Error in zip.");
+        exit(1);
+    } 
+}
