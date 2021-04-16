@@ -13,7 +13,7 @@ Sources:
 #define WRITE_BINARY "wb"
 
 FILE* open_file(char*, char*);
-void write_unsigned_int(FILE*, uint32_t);
+void write_four_byte_unsigned_int(FILE*, uint32_t);
 bool supported_by_ascii(int);
 void check_src_dest(FILE*, FILE*);
 void zip(FILE*, FILE*);
@@ -31,7 +31,7 @@ FILE* open_file(char* filename, char* mode) {
 
 /* Writes the four_byte_uint into dest as a four byte block in binary format.
     FILE* must be in wb mode (e.g., get FILE* using fopen() beforehand) */
-void write_unsigned_int(FILE* dest, uint32_t four_byte_uint) {
+void write_four_byte_unsigned_int(FILE* dest, uint32_t four_byte_uint) {
     if (!dest) {
         fprintf(stderr, "Destination was null.\n");
         exit(1);
@@ -39,7 +39,7 @@ void write_unsigned_int(FILE* dest, uint32_t four_byte_uint) {
     size_t elems_written = fwrite(&four_byte_uint, 4, 1, dest);
     if (elems_written != 1) {
         /* Perror used because global errno was set by fwrite */
-        perror("Error in writing to file in write_unsigned_int.");
+        perror("Error in writing to file in write_four_byte_unsigned_int.");
         exit(1);
     }
 }
@@ -50,7 +50,7 @@ bool supported_by_ascii(int c) {
 
 void insert_if_supported(FILE* dest, int val, uint32_t rc) {
     if (supported_by_ascii(val)) {
-        /*write_unsigned_int(dest, rc);*/
+        /*write_four_byte_unsigned_int(dest, rc);*/
         puts("Supported");
     } else {
         fprintf(stderr, "Encountered a non-ASCII supported character: %c, omitting...\n", val);
