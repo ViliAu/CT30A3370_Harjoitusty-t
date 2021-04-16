@@ -48,6 +48,15 @@ bool supported_by_ascii(int c) {
     return (c >= 0 && c <= 127);
 }
 
+void insert_if_supported(FILE* dest, int val, uint32_t rc) {
+    if (supported_by_ascii(val)) {
+        /*write_unsigned_int(dest, rc);*/
+        puts("Supported");
+    } else {
+        fprintf(stderr, "Encountered a non-ASCII supported character: %c, omitting...\n", val);
+    }
+}
+
 void check_src_dest(FILE* src, FILE* dest) {
     if (!src && dest) {
         fclose(dest);
@@ -65,14 +74,24 @@ void check_src_dest(FILE* src, FILE* dest) {
 
 void zip(FILE* src, FILE* dest) {
     check_src_dest(src, dest);
-    int rc;
-    while ((rc = fgetc(src)) != EOF) {
-        putc(rc, dest); /* TODO For testing purposes, remove on deployment */
-        if (supported_by_ascii(rc)) {
-            write_unsigned_int(dest, rc);
-        } else {
-            fprintf(stderr, "Encountered non-ASCII supported character: %c, omitting...\n", rc);
+    int rc, prev;
+    uint32_t repeatc = 1;
+    if ((prev = fgetc(src)) != EOF) {
+        while ((rc = fgetc(src)) != EOF) {
+            /* Platform independent maximum value of 32-bit unsigned int, required in case overflow */
+            if (rc == prev && repeatc < 4294967295) {
+                repeatc++;
+                continue;
+            }
+            insert_if_supported(dest, prev, rc);
+            putc(prev, dest); /* TODO For testing purposes, remove on deployment */
+            printf("\nrepeated: %d\n", repeatc);
+            repeatc = 1;
+            prev = rc;
         }
+        insert_if_supported(dest, prev, rc);
+        putc(prev, dest); /* TODO For testing purposes, remove on deployment */
+        printf("\nrepeated: %d\n", repeatc);
     }
     if (ferror(src) != 0) {
         perror("I/O Error in zip.");
@@ -86,7 +105,7 @@ int main(int argc, char** argv) {
         exit(1);
     } else {
         for (argv++; *argv != NULL; argv++) {
-            puts(*argv);
+            zip(open_file(*argv, "r"), stdout);
         }
     }
     return 0;
