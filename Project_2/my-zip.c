@@ -14,6 +14,7 @@ Sources:
 
 FILE* open_file(char*, char*);
 void write_four_byte_unsigned_int(FILE*, uint32_t);
+void write_one_byte_unsigned_int(FILE*, uint8_t);
 bool supported_by_ascii(int);
 void check_src_dest(FILE*, FILE*);
 void zip(FILE*, FILE*);
@@ -40,6 +41,21 @@ void write_four_byte_unsigned_int(FILE* dest, uint32_t four_byte_uint) {
     if (elems_written != 1) {
         /* Perror used because global errno was set by fwrite */
         perror("Error in writing to file in write_four_byte_unsigned_int.");
+        exit(1);
+    }
+}
+
+/* Writes the one_byte_uint into dest as a one byte block in binary format.
+    FILE* must be in wb mode (e.g., get FILE* using fopen() beforehand) */
+void write_one_byte_unsigned_int(FILE* dest, uint8_t one_byte_uint) {
+    if (!dest) {
+        fprintf(stderr, "Destination was null.\n");
+        exit(1);
+    }
+    size_t elems_written = fwrite(&one_byte_uint, 1, 1, dest);
+    if (elems_written != 1) {
+        /* Perror used because global errno was set by fwrite */
+        perror("Error in writing to file in write_one_byte_unsigned_int.");
         exit(1);
     }
 }
