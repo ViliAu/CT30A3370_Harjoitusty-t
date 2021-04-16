@@ -1,6 +1,6 @@
 /*
 Authors: Jani Heinikoski, Vili Huusko
-Last modified (date): 15.04.2021
+Last modified (date): 16.04.2021
 Sources:
 - fwrite man page
 */
@@ -9,16 +9,12 @@ Sources:
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define READ_BINARY "rb"
-#define WRITE_BINARY "wb"
-
 FILE* open_file(char*, char*);
 void write_four_byte_unsigned_int(FILE*, uint32_t);
 void write_one_byte_unsigned_int(FILE*, uint8_t);
 bool supported_by_ascii(int);
 void check_src_dest(FILE*, FILE*);
 void zip(FILE*, FILE*);
-
 
 /* Wrapper with error handling for fopen */
 FILE* open_file(char* filename, char* mode) {
@@ -64,12 +60,14 @@ bool supported_by_ascii(int c) {
     return (c >= 0 && c <= 127);
 }
 
-void insert_if_supported(FILE* dest, int val, uint32_t rc) {
-    if (supported_by_ascii(val)) {
-        /*write_four_byte_unsigned_int(dest, rc);*/
-        puts("Supported");
+void insert_if_supported(FILE* dest, int read_character, uint32_t repeat_count) {
+    if (supported_by_ascii(read_character)) {
+        /* Write the repetition count in a four byte block and the 
+        ASCII-char as one byte block*/
+        write_four_byte_unsigned_int(dest, repeat_count);
+        write_one_byte_unsigned_int(dest, read_character);
     } else {
-        fprintf(stderr, "Encountered a non-ASCII supported character: %c, omitting...\n", val);
+        fprintf(stderr, "Encountered a non-ASCII supported character: %c, omitting...\n", read_character);
     }
 }
 
@@ -90,24 +88,20 @@ void check_src_dest(FILE* src, FILE* dest) {
 
 void zip(FILE* src, FILE* dest) {
     check_src_dest(src, dest);
-    int rc, prev;
+    int read_character, prev;
     uint32_t repeatc = 1;
     if ((prev = fgetc(src)) != EOF) {
-        while ((rc = fgetc(src)) != EOF) {
+        while ((read_character = fgetc(src)) != EOF) {
             /* Platform independent maximum value of 32-bit unsigned int, required in case overflow */
-            if (rc == prev && repeatc < 4294967295) {
+            if (read_character == prev && repeatc < 4294967295) {
                 repeatc++;
                 continue;
             }
-            insert_if_supported(dest, prev, rc);
-            putc(prev, dest); /* TODO For testing purposes, remove on deployment */
-            printf("\nrepeated: %d\n", repeatc);
+            insert_if_supported(dest, prev, repeatc);
             repeatc = 1;
-            prev = rc;
+            prev = read_character;
         }
-        insert_if_supported(dest, prev, rc);
-        putc(prev, dest); /* TODO For testing purposes, remove on deployment */
-        printf("\nrepeated: %d\n", repeatc);
+        insert_if_supported(dest, prev, repeatc);
     }
     if (ferror(src) != 0) {
         perror("I/O Error in zip.");
