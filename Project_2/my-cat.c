@@ -25,7 +25,7 @@ FILE* open_file(char* filename, char* mode) {
     return fp;
 }
 
-/* Reads a whole line from input_stream to line */
+/* Reads a whole line from input_stream to line, returns false in case of EOF */
 bool get_line(char** line, FILE* input_stream) {
     if (!input_stream) {
         fprintf(stderr, "my-cat: input stream was NULL\n");
@@ -36,7 +36,7 @@ bool get_line(char** line, FILE* input_stream) {
     ssize_t characters_read = getline(line, &size_of_line, input_stream);
     if (characters_read == -1) {
         if (ferror(input_stream) != 0) {
-            /* Global errno is set if getline fails -1, also returns -1 on EOF.
+            /* Global errno is set if getline fails and returns -1, also returns -1 on EOF.
              According to man pages, *line should be free'd anyway. */
             perror("my-cat");
             free(*line);
