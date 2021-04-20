@@ -9,33 +9,61 @@ Sources:
 #include <stdlib.h>
 #include <string.h>
 
-/* TODO: Change the get_line func to the wrapper */
-void search_word(char* word, char* file_name) {
-    char* line;
-    size_t len = 0;
-    ssize_t chars_read = 0;
+FILE* open_file(char*);
+int get_line(char**, FILE*);
 
-    /* Open file */
+int get_line(char** line, FILE* input_stream) {
+    if (!input_stream) {
+        fprintf(stderr, "my-grep: input stream was NULL\n");
+        exit(1);
+    }
+    *line = NULL;
+    size_t size_of_line = 0;
+    ssize_t characters_read = getline(line, &size_of_line, input_stream);
+    if (characters_read == -1) {
+        if (ferror(input_stream) != 0) {
+            /* Global errno is set if getline fails and returns -1, also returns -1 on EOF.
+             According to man pages, *line should be free'd anyway. */
+            perror("my-grep");
+            free(*line);
+            exit(1);
+        }
+        return 0;
+    }
+    return 1;
+}
+
+FILE* open_file(char* file_name) {
+    /* If the file_name = "stdout", return stdout.
+     * Otherwise try to open the specified file */
+
     FILE* file_to_read;
     if (strcmp(file_name, "stdin")) {
         if ((file_to_read = fopen(file_name, "r")) == NULL) {
-            fprintf(stderr, "error: cannot open file '%s'\n", file_name);
+            fprintf(stderr, "my-grep: cannot open file '%s'\n", file_name);
             exit(1);
         }
     }
     else {
         file_to_read = stdin;
     }
+    return file_to_read;
+}
+
+void search_word(char* word, char* file_name) {
+    FILE* file_to_read = open_file(file_name);
     /* i is used to loop through the read line */
     /* j is used to check the same characters */
     int i, j;
-    /* Current char in the word we're trying to find */
-    while ((chars_read = getline(&line, &len, file_to_read)) != -1) {
+    char* line = NULL;
+    while (get_line(&line, file_to_read)) {
+        j = 0;
         /* Break user input on an empty line */
         if (!strcmp(file_name, "stdin") && !strcmp(line, "\n"))
             break;
-        j = 0;
-        for (i = 0; i < chars_read; i++) {
+        
+        /* Loop through the line and compare chars */
+        for (i = 0; i < strlen(line); i++) {
             if (line[i] == word[j]) {
                 j++;
             }
@@ -48,6 +76,7 @@ void search_word(char* word, char* file_name) {
                 break;
             }
         }
+        free(line);
     }
     free(line);
     /* Close the file if not stdin */
@@ -56,6 +85,7 @@ void search_word(char* word, char* file_name) {
 }
 
 int main(int argc, char** argv) {
+    printf("a");
     if (argc < 2) {
         fprintf(stderr, "my-grep: searchterm [file...]\n");
         exit(1);
