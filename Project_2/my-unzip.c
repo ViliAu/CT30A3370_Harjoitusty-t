@@ -8,12 +8,17 @@ Sources:
 #include <stdint.h>
 #include <stdlib.h>
 
-void unzip(char* file_name) {
-    FILE* fptr = fopen(file_name, "rb");
-	if (!fptr) {
+FILE* open_file(char* file_name) {
+    FILE* f = fopen(file_name, "rb");
+	if (!f) {
         fprintf(stderr, "my-zip: couldn't open file\n");
         exit(1);
     }
+    return f;
+}
+
+void unzip(char* file_name) {
+    FILE* fptr = open_file(file_name);
     uint32_t repeated_count;
     uint8_t ascii;
     size_t read_count;
@@ -42,7 +47,7 @@ int main (int argc, char** argv) {
         exit(1);
     }
     /* Loop the file names */
-    int i = 2;
+    int i = 1;
     for (; i < argc; i++) {
         unzip(argv[i]);
     }
