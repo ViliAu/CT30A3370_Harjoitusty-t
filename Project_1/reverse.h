@@ -10,7 +10,6 @@ Sources: -
     #include <stdbool.h>
     #include <stdlib.h>
     #include <string.h>
-
     /* Stack structure's node */
     typedef struct Node {
         char* line;
@@ -21,7 +20,6 @@ Sources: -
     void push(Node**, Node*);
     Node* pop(Node**);
     void free_node(Node*, bool);
-
     /* Stack input */
     void read_input(char*, Node**);
     /* Stack output */
