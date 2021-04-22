@@ -1,8 +1,7 @@
 /*
 Authors: Jani Heinikoski, Vili Huusko
-Last modified (date): 16.04.2021
+Last modified (date): 22.04.2021
 Sources:
-- fwrite man page
 */
 #include <stdio.h>
 #include <stdint.h>
