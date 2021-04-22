@@ -9,13 +9,8 @@ Sources: -
     #include <stdio.h>
     #include <stdbool.h>
     #include <stdlib.h>
-    /* Currently only required for the unit tests */
     #include <string.h>
-    /* UNIT TEST DECLARATIONS, LATER MOVED TO SEPARATE HEADER */
-    void test_push();
-    void test_new_node();
-    void test_pop();
-    void test_file_read();
+
     /* Stack structure's node */
     typedef struct Node {
         char* line;
@@ -26,8 +21,13 @@ Sources: -
     void push(Node**, Node*);
     Node* pop(Node**);
     void free_node(Node*, bool);
+
     /* Stack input */
-    void read_input(char* file_name, Node** head);
+    void read_input(char*, Node**);
     /* Stack output */
-    void print_stack(char* file_name, Node** tail);
+    void print_stack(char*, Node**);
+    /* Open file */
+    FILE* open_file(char*, char*);
+    /* Get line from input */
+    bool get_line(char**, FILE*);
 #endif
