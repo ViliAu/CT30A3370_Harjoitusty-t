@@ -1,6 +1,6 @@
 /*
 Authors: Jani Heinikoski, Vili Huusko
-Last modified (date): 20.04.2021
+Last modified (date): 22.04.2021
 Sources:
 */
 
@@ -17,6 +17,7 @@ FILE* open_file(char* file_name) {
     return f;
 }
 
+/* TODO: Missing error handling */
 void unzip(char* file_name) {
     FILE* fptr = open_file(file_name);
     uint32_t repeated_count;
@@ -25,12 +26,12 @@ void unzip(char* file_name) {
     int i;
     while ((read_count = fread(&repeated_count, 4, 1, fptr))) {
         if (read_count != 1) {
-            perror("Unexpected error in fread.");
+            perror("fread");
             exit(1);
         }
         read_count = fread(&ascii, 1, 1, fptr);
         if (read_count != 1) {
-            perror("Unexpected error in fread.");
+            perror("fread");
             exit(1);
         }
 
