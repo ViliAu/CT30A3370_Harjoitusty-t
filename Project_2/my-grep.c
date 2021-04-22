@@ -34,11 +34,11 @@ int get_line(char** line, FILE* input_stream) {
 }
 
 FILE* open_file(char* file_name) {
-    /* If the file_name = "stdout", return stdout.
+    /* If the file_name = NULL, return stdout.
      * Otherwise try to open the specified file */
 
     FILE* file_to_read;
-    if (strcmp(file_name, "stdin")) {
+    if (file_name) {
         if ((file_to_read = fopen(file_name, "r")) == NULL) {
             fprintf(stderr, "my-grep: cannot open file '%s'\n", file_name);
             exit(1);
@@ -59,7 +59,7 @@ void search_word(char* word, char* file_name) {
     while (get_line(&line, file_to_read)) {
         j = 0;
         /* Break user input on an empty line */
-        if (!strcmp(file_name, "stdin") && !strcmp(line, "\n"))
+        if (!file_name && line[0] == '\n')
             break;
         
         /* Loop through the line and compare chars */
@@ -80,19 +80,18 @@ void search_word(char* word, char* file_name) {
     }
     free(line);
     /* Close the file if not stdin */
-    if (strcmp(file_name, "stdin"))
+    if (!file_name)
         fclose(file_to_read);
 }
 
 int main(int argc, char** argv) {
-    printf("a");
     if (argc < 2) {
         fprintf(stderr, "my-grep: searchterm [file...]\n");
         exit(1);
     }
     /* Loop the file names */
     if (argc == 2) {
-        search_word(argv[1], "stdin");
+        search_word(argv[1], NULL);
     }
     else {
         int i = 2;
