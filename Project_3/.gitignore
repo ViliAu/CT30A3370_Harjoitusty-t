@@ -2,3 +2,4 @@ makefile
 test*
 *.txt
 wish
+.vscode
