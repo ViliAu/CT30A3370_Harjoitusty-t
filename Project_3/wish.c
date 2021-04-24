@@ -42,6 +42,7 @@ void increment_str_size(char**);
 void tokenize(Token**, char*);
 void add_token(Token**, Token*);
 bool supported_by_ascii(int);
+bool check_multiple_redirs(char*, size_t);
 
 /* ****************************** TEST FUNCTIONS ****************************** */
 /* For test purposes only */
@@ -65,11 +66,22 @@ void on_error(char* error_message, bool exit_after) {
     if (exit_after) exit(1);
 }
 
+bool check_multiple_redirs(char* input, size_t input_length) {
+    size_t i = 0;
+    unsigned short counter = 0;
+    for (; i < (input_length - 1); i++) {
+        if (*(input + i) == '>')
+            counter++;
+    }
+    return (counter > 1);
+}
+
 /* Validates read input, does not guarantee correct commands but checks for syntax errors */
 bool validate_input(char* input, Token** head) {
     if (!input) return false;
     size_t input_length = strlen(input);
     if (input_length == 0) return false;
+    if (check_multiple_redirs(input, input_length)) return false;
     tokenize(head, input);
     if (*head == NULL) return false;
     return true;
