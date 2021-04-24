@@ -117,7 +117,7 @@ Token* new_ampersand_token() {
 Token* tokenize_further(char** token, size_t token_len) {
     Token* head = NULL, *ptr = NULL;
     bool add_ampersand_to_end = (*(*token + (token_len - 2)) == '&');
-    char* tok = strtok(*token, "&\0");
+    char* tok = strtok(*token, "&");
     size_t tok_length;
     while (tok != NULL) {
         if (**token == '&')
