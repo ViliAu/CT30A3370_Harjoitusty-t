@@ -14,13 +14,64 @@
 #define INV_INPUT_ERR_MSG "Invalid input\n"
 #define OPEN_FILE_ERR_MSG "Could not open batch file\n"
 #define BAD_BATCH_ERR_MSG "Invalid syntax in batch file\n"
+#define MALLOC_ERR_MSG "Failed to allocate memory\n"
+
+#define BUILT_IN_EXIT "exit" 
+
+struct Token {
+    char* token;
+    size_t token_length;
+    struct Token* next;
+} typedef Token;
 
 void on_error(char*, bool);
 bool get_line(char**, FILE*);
 void interactive_mode();
-bool validate_input(char*);
+bool validate_input(char*, Token**);
 void batch_mode(char*);
 FILE* open_file(char*, char*);
+Token* new_token();
+void free_list(Token*);
+char* new_str(size_t);
+void increment_str_size(char**);
+void tokenize(Token**, char*);
+void add_token(Token**, Token*);
+bool supported_by_ascii(int);
+/* For test purposes only */
+void print_list(Token*);
+/* For test purposes only */
+void print_list(Token* head) {
+    Token* ptr = head;
+    while (ptr) {
+        printf("token: %s, token_length: %ld\n", ptr->token, ptr->token_length);
+        ptr = ptr->next;
+    }
+}
+
+bool supported_by_ascii(int c) {
+    return (c >= 0 && c <= 127);
+}
+
+Token* new_token() {
+    Token* token = malloc(sizeof(Token));
+    if (!token) {
+        on_error(MALLOC_ERR_MSG, true);
+    }
+    token->token_length = 0;
+    token->token = NULL;
+    token->next = NULL;
+    return token;
+}
+
+void free_list(Token* head) {
+    Token* ptr = head;
+    while(ptr) {
+        head = ptr;
+        ptr = ptr->next;
+        free(head->token);
+        free(head);
+    }
+}
 
 /* Wrapper with error handling for fopen */
 FILE* open_file(char* filename, char* mode) {
@@ -61,31 +112,114 @@ void on_error(char* error_message, bool exit_after) {
     if (exit_after) exit(1);
 }
 
-bool validate_input(char* input) {
+char* new_str(size_t str_length) {
+    char* str = malloc(str_length);
+    if (!str) {
+        on_error(MALLOC_ERR_MSG, false);
+        exit(1);
+    }
+    *str = '\0';
+    return str;
+}
+
+void increment_str_size(char** str) {
+    size_t new_size = strlen(*str) + 2;
+    *str = realloc(*str, new_size);
+    if (!(*str)) {
+        on_error(MALLOC_ERR_MSG, false);
+        exit(1);
+    }
+}
+
+bool validate_input(char* input, Token** head) {
+    if (!input) return false;
+    size_t input_length = strlen(input);
+    if (input_length == 0) return false;
+    tokenize(head, input);
+    if (*head == NULL) return false;
     return true;
+}
+
+void add_token(Token** head, Token* tok) {
+    if (*head == NULL) {
+        *head = tok;
+        return;
+    }
+    Token* ptr = *head;
+    while (ptr->next != NULL) {
+        ptr = ptr->next;
+    }
+    ptr->next = tok;
+}
+
+void tokenize(Token** head, char* line) {
+    size_t line_length = strlen(line), i = 0, j;
+    char* temp_tok;
+    bool token_found;
+    for (; i < (line_length - 1); i++) {
+        token_found = false;
+        j = 0;
+        if (!supported_by_ascii(*(line + i))) {
+            free_list(*head);
+            *head = NULL;
+            return;
+        }
+        temp_tok = new_str(1);
+        *temp_tok = '\0';
+        while (i <= line_length && *(line + i) != ' ' && *(line + i) != '\t' && *(line + i) != '\n' && *(line + i) != '\0') {
+            if (!supported_by_ascii(*(line + i))) {
+                free_list(*head);
+                free(temp_tok);
+                *head = NULL;
+                return;
+            }
+            increment_str_size(&temp_tok);
+            temp_tok[j++] = *(line + i++);
+            temp_tok[j] = '\0';
+            token_found = true;
+        }
+        if (token_found) {
+            Token* token = new_token();
+            token->token = new_str(j + 1);
+            strcpy(token->token, temp_tok);
+            token->token_length = j + 1;
+            add_token(head, token);
+        }
+        free(temp_tok);
+    }
 }
 
 void interactive_mode() {
     char* line;
+    Token* head = NULL;
     while (true) {
         write(STDOUT_FILENO, PROMPT, strlen(PROMPT));
+        head = NULL;
         line = NULL;
         /* In either mode, if you hit the end-of-file marker (EOF), 
         you should call exit(0) and exit gracefully. */
         if (!get_line(&line, stdin)) exit(0);
-        if (validate_input(line)) {
-            /* Carry out the command */
+        if (validate_input(line, &head)) {
+            print_list(head);
+            if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
+                break;
+            }
         } else {
             on_error(INV_INPUT_ERR_MSG, false);
         }
+        free(line);
+        free_list(head);
     }
+    free(line);
+    free_list(head);
 }
 
 void batch_mode(char* batch_file) {
     FILE* fp = open_file(batch_file, "r");
+    Token* head = NULL;
     char* line = NULL;
     while (get_line(&line, fp)) {
-        if (validate_input(line)) {
+        if (validate_input(line, &head)) {
             /* Carry out the command */
         } else {
             /* Bad batch file, don't continue execution */
