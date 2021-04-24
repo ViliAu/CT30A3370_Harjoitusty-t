@@ -45,9 +45,8 @@ int main (int argc, char** argv) {
         exit(1);
     }
     /* Loop the file names */
-    int i = 1;
-    for (; i < argc; i++) {
-        unzip(argv[i]);
+    for (argv++; *argv != NULL; argv++) {
+        unzip(*argv);
     }
 	return 0;
 }
