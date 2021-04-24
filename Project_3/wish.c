@@ -243,14 +243,22 @@ void batch_mode(char* batch_file) {
     char* line = NULL;
     while (get_line(&line, fp)) {
         if (validate_input(line, &head)) {
-            /* Carry out the command */
+            print_list(head); /* Test function */
+            if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
+                break;
+            }
         } else {
             /* Bad batch file, don't continue execution */
             on_error(BAD_BATCH_ERR_MSG, false);
             break;
         }
+        free(line);
+        free_list(head);
+        head = NULL;
         line = NULL;
     }
+    free(line);
+    free_list(head);
     fclose(fp);
     /* In either mode, if you hit the end-of-file marker (EOF), 
     you should call exit(0) and exit gracefully. */
