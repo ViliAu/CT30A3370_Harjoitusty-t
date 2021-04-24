@@ -17,27 +17,24 @@ FILE* open_file(char* file_name) {
     return f;
 }
 
-/* TODO: Missing error handling */
 void unzip(char* file_name) {
     FILE* fptr = open_file(file_name);
     uint32_t repeated_count;
     uint8_t ascii;
     size_t read_count;
     int i;
+    /* fread guaranteed to return zero in case of error or EOF in this case because nmemb is exactly one */
+    /* otherwise always returns 1. In other cases use while (fread != nmemb). */
     while ((read_count = fread(&repeated_count, 4, 1, fptr))) {
-        if (read_count != 1) {
-            perror("fread");
-            exit(1);
-        }
         read_count = fread(&ascii, 1, 1, fptr);
-        if (read_count != 1) {
-            perror("fread");
-            exit(1);
-        }
-
+        if (!read_count) break;
         for (i = 0; i < repeated_count; i++) {
             fprintf(stdout, "%c", ascii);
         }
+    }
+    if (ferror(fptr) != 0) {
+        perror("my-unzip");
+        exit(1);
     }
     fclose(fptr);
 }
