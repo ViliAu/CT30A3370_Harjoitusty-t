@@ -4,7 +4,7 @@ CC = gcc
 # compiler flags:
 #  -Wall turns on most, but not all, compiler warnings
 #  -ansi enforce c89 c -standard
-CFLAGS  = -Wall -ansi
+CFLAGS  = -Wall -Werror -ansi
 
 # the build target executable:
 TARGET = reverse
