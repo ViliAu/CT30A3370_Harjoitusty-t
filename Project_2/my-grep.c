@@ -82,7 +82,7 @@ void search_word(char* word, char* file_name) {
     }
     free(line);
     /* Close the file if not stdin */
-    if (!file_name)
+    if (file_name)
         fclose(file_to_read);
 }
 
