@@ -113,8 +113,11 @@ int main(int argc, char** argv) {
         puts("Usage: ./my-zip file1 [file2 ...]");
         exit(1);
     } else {
+        FILE* fp;
         for (argv++; *argv != NULL; argv++) {
-            zip(open_file(*argv, "r"), stdout);
+            fp = open_file(*argv, "r");
+            zip(fp, stdout);
+            fclose(fp);
         }
     }
     return 0;
