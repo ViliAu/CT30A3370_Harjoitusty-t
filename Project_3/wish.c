@@ -40,9 +40,11 @@ void free_list(Token*);
 char* new_str(size_t);
 void increment_str_size(char**);
 void tokenize(Token**, char*);
+Token* tokenize_further(char**, size_t);
 void add_token(Token**, Token*);
 bool supported_by_ascii(int);
 bool check_multiple_redirs(char*, size_t);
+bool check_repeating_ampersands(char*, size_t);
 
 /* ****************************** TEST FUNCTIONS ****************************** */
 /* For test purposes only */
@@ -76,12 +78,23 @@ bool check_multiple_redirs(char* input, size_t input_length) {
     return (counter > 1);
 }
 
-/* Validates read input, does not guarantee correct commands but checks for syntax errors */
+bool check_repeating_ampersands(char* input, size_t input_length) {
+    size_t i = 0;
+    for (; i < (input_length - 1); i++) {
+        if (*(input + i) == '&' && *(input + (i + 1)) == '&')
+            return true;
+    }
+    return false;
+}
+
+/* Validates read input and divides it into tokens to a list defined by head,
+ does not guarantee correct commands but checks for syntax errors */
 bool validate_input(char* input, Token** head) {
     if (!input) return false;
     size_t input_length = strlen(input);
     if (input_length == 0) return false;
     if (check_multiple_redirs(input, input_length)) return false;
+    if (check_repeating_ampersands(input, input_length)) return false;
     tokenize(head, input);
     if (*head == NULL) return false;
     return true;
@@ -89,6 +102,39 @@ bool validate_input(char* input, Token** head) {
 
 bool supported_by_ascii(int c) {
     return (c >= 0 && c <= 127);
+}
+
+/* Returns a token with &\0 as its default token property */
+Token* new_ampersand_token() {
+    Token* tok = new_token();
+    tok->token = new_str(2);
+    tok->token_length = 2;
+    strcpy(tok->token, "&\0");
+    return tok;
+}
+
+/* Tokenizes the given token based on ampersands (because they do not require whitespace) */
+Token* tokenize_further(char** token, size_t token_len) {
+    Token* head = NULL, *ptr = NULL;
+    bool add_ampersand_to_end = (*(*token + (token_len - 2)) == '&');
+    char* tok = strtok(*token, "&\0");
+    size_t tok_length;
+    while (tok != NULL) {
+        if (**token == '&')
+            add_token(&head, new_ampersand_token());
+        tok_length = strlen(tok);
+        ptr = new_token();
+        ptr->token = new_str(tok_length + 1);
+        ptr->token_length = tok_length + 1;
+        strcpy(ptr->token, tok);
+        add_token(&head, ptr);
+        if ((tok = strtok(NULL, "&")) != NULL) {
+            add_token(&head, new_ampersand_token());
+        }
+    }
+    if (add_ampersand_to_end)
+        add_token(&head, new_ampersand_token());
+    return head;
 }
 
 /* Splits the line into a token list (used to parse commands) */
@@ -119,11 +165,16 @@ void tokenize(Token** head, char* line) {
             token_found = true;
         }
         if (token_found) {
-            Token* token = new_token();
-            token->token = new_str(j + 1);
-            strcpy(token->token, temp_tok);
-            token->token_length = j + 1;
-            add_token(head, token);
+            Token* token;
+            if ((token = tokenize_further(&temp_tok, (j + 1)))) {
+                add_token(head, token);
+            } else {
+                token = new_token();
+                token->token = new_str(j + 1);
+                strcpy(token->token, temp_tok);
+                token->token_length = j + 1;
+                add_token(head, token);
+            }
         }
         free(temp_tok);
     }
