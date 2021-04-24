@@ -8,11 +8,12 @@ Sources:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 FILE* open_file(char*);
-int get_line(char**, FILE*);
+bool get_line(char**, FILE*);
 
-int get_line(char** line, FILE* input_stream) {
+bool get_line(char** line, FILE* input_stream) {
     if (!input_stream) {
         fprintf(stderr, "my-grep: input stream was NULL\n");
         exit(1);
@@ -28,15 +29,14 @@ int get_line(char** line, FILE* input_stream) {
             free(*line);
             exit(1);
         }
-        return 0;
+        return false;
     }
-    return 1;
+    return true;
 }
 
 FILE* open_file(char* file_name) {
     /* If the file_name = NULL, return stdout.
      * Otherwise try to open the specified file */
-
     FILE* file_to_read;
     if (file_name) {
         if ((file_to_read = fopen(file_name, "r")) == NULL) {
@@ -55,15 +55,17 @@ void search_word(char* word, char* file_name) {
     /* i is used to loop through the read line */
     /* j is used to check the same characters */
     int i, j;
+    size_t line_len, word_len;
     char* line = NULL;
     while (get_line(&line, file_to_read)) {
         j = 0;
         /* Break user input on an empty line */
         if (!file_name && line[0] == '\n')
             break;
-        
+        line_len = strlen(line);
+        word_len = strlen(word);
         /* Loop through the line and compare chars */
-        for (i = 0; i < strlen(line); i++) {
+        for (i = 0; i < line_len; i++) {
             if (line[i] == word[j]) {
                 j++;
             }
@@ -71,7 +73,7 @@ void search_word(char* word, char* file_name) {
                 j = 0;
             }
             /* Check if the word has been found */
-            if (j == strlen(word)) {
+            if (j == word_len) {
                 fprintf(stdout, "%s", line);
                 break;
             }
