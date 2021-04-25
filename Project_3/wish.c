@@ -20,6 +20,7 @@ Sources: -
 #define OPEN_FILE_ERR_MSG "Could not open batch file\n"
 #define BAD_BATCH_ERR_MSG "Invalid syntax in batch file\n"
 #define MALLOC_ERR_MSG "Failed to allocate memory\n"
+#define CD_ERR_MSG "Chdir failed\n"
 
 #define BUILT_IN_EXIT "exit" 
 #define BUILT_IN_PATH "path"
@@ -367,6 +368,15 @@ void built_in_path(Token* head) {
     }
 }
 
+void built_in_cd(Token* head) {
+    if (head->next && !head->next->next) {
+        if (chdir(head->next->token) != -1) {
+            return;
+        }
+    }
+    on_error(CD_ERR_MSG, false);
+}
+
 /* ****************************** SHELL MODES ****************************** */
 
 void interactive_mode() {
@@ -389,8 +399,7 @@ void interactive_mode() {
             } else if (strcmp(head->token, BUILT_IN_PATH) == 0) {
                 built_in_path(head);
             } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
-                if (head->next && !head->next->next)
-                    printf("toimii");
+                built_in_cd(head);
             } else if (strcmp(head->token, "printti") == 0) {
                 print_path();
             } else {
