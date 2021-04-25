@@ -50,18 +50,29 @@ bool check_repeating_ampersands(char*, size_t);
 Token* new_redirect_token();
 void exit_shell(bool);
 bool check_parallel_built_ins(Token*);
+void built_in_path(Token*);
 
 Token* PATH = NULL;
 
 /* ****************************** TEST FUNCTIONS ****************************** */
 /* For test purposes only */
 void print_list(Token*);
+void print_path();
 /* For test purposes only */
 void print_list(Token* head) {
     Token* ptr = head;
     while (ptr) {
         printf("token: %s, token_length: %ld\n", ptr->token, ptr->token_length);
         ptr = ptr->next;
+    }
+}
+void print_path() {
+    if (PATH) {
+        Token* ptr = PATH;
+        while (ptr) {
+            printf("path: %s, len: %ld\n", ptr->token, ptr->token_length);
+            ptr = ptr->next;
+        }
     }
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
@@ -141,7 +152,7 @@ bool validate_input(char* input, Token** head) {
         tokenize(head, input);
     }
     if (*head == NULL) return false;
-    if (*(*head)->token == '>') return false;
+    if (*(*head)->token == '>' || *(*head)->token == '&') return false;
     if (!check_parallel_built_ins(*head)) return false;
     return true;
 }
@@ -227,7 +238,7 @@ void tokenize(Token** head, char* line) {
                 add_token(head, token);
                 Token* ptr = *head;
                 while (ptr->next) {
-                    if (*ptr->token == '&' && *ptr->next->token == '&') {
+                    if (*ptr->token == '&' && (*ptr->next->token == '&' || *ptr->next->token == '>')) {
                         free_list(*head);
                         free(temp_tok);
                         *head = NULL;
@@ -338,6 +349,24 @@ bool get_line(char** line, FILE* input_stream) {
     return true;
 }
 
+/* ****************************** BUILT-IN COMMANDS ****************************** */
+
+void built_in_path(Token* head) {
+    free_list(PATH);
+    PATH = NULL;
+    if (head->next) {
+        Token* ptr = head->next;
+        while (ptr) {
+            Token* token = new_token();
+            token->token = new_str(ptr->token_length);
+            strcpy(token->token, ptr->token);
+            token->token_length = ptr->token_length;
+            add_token(&PATH, token);
+            ptr = ptr->next;
+        }
+    }
+}
+
 /* ****************************** SHELL MODES ****************************** */
 
 void interactive_mode() {
@@ -358,9 +387,12 @@ void interactive_mode() {
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
                 break;
             } else if (strcmp(head->token, BUILT_IN_PATH) == 0) {
-                
+                built_in_path(head);
             } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
-
+                if (head->next && !head->next->next)
+                    printf("toimii");
+            } else if (strcmp(head->token, "printti") == 0) {
+                print_path();
             } else {
                 /* Not built-in command */
             }
