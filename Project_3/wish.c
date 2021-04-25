@@ -21,6 +21,7 @@ Sources: -
 #define BAD_BATCH_ERR_MSG "Invalid syntax in batch file\n"
 #define MALLOC_ERR_MSG "Failed to allocate memory\n"
 #define CD_ERR_MSG "Chdir failed\n"
+#define EXIT_ERR_MSG "It is an error to pass any arguments to exit\n"
 
 #define BUILT_IN_EXIT "exit" 
 #define BUILT_IN_PATH "path"
@@ -395,7 +396,10 @@ void interactive_mode() {
             /* Built-in commands must always be the first token in input
             because parallel built-ins are not allowed */
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
-                break;
+                if (head->next)
+                    on_error(EXIT_ERR_MSG, false);
+                else
+                    break;
             } else if (strcmp(head->token, BUILT_IN_PATH) == 0) {
                 built_in_path(head);
             } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
