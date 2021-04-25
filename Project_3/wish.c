@@ -10,6 +10,7 @@ Sources: -
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/wait.h>
 
 #define PROMPT "wish>"
 
@@ -62,6 +63,11 @@ void built_in_path(Token*);
 bool check_valid_redirection(Token*);
 Redir_Data* redirect(Token*);
 void restore(Redir_Data*);
+void execute_command(Token*);
+char* check_access(char*);
+char** new_str_array(size_t);
+char** increment_str_array_size(char**, size_t);
+void free_str_array(char**, size_t);
 
 Token* PATH = NULL;
 
@@ -87,6 +93,96 @@ void print_path() {
     }
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
+
+char* check_access(char* cmd) {
+    char* path;
+    Token* ptr = PATH;
+    while (ptr) {
+        path = malloc(strlen(cmd)+ptr->token_length);
+        *path = '\0';
+        strcat(path, ptr->token);
+        strcat(path, cmd);
+        if (access(path, X_OK) == 0) {
+            return path;
+        }
+        free(path);
+        ptr = ptr->next;
+    }
+    return NULL;
+}
+
+void execute_command(Token* head) {
+    if (!PATH) {
+        return;
+    }
+    Token* ptr = head;
+    int argc = 0;
+    char** argv = NULL;
+    char* cmd = NULL;
+    bool lwc;
+    while (ptr) {
+        lwc = false;
+        if (!cmd) {
+            cmd = check_access(ptr->token);
+            /* if command not found => scroll to the next & -symbol */
+            if (!cmd) {
+                while (*ptr->token != '&' && ptr->next) {
+                    ptr = ptr->next;
+                }
+                ptr = ptr->next;
+                continue;
+            }
+            lwc = true;
+            argc = 0;
+            argv = new_str_array(1);
+            argv[argc] = new_str(strlen(cmd)+1);
+            strcpy(argv[argc], cmd);
+            argc++;
+            argv = increment_str_array_size(argv, argc);
+            argv[argc] = NULL;
+            if (ptr->next) {
+                ptr = ptr->next;
+                continue;
+            }
+        }
+
+        if (*ptr->token != '>' && *ptr->token != '&' && !lwc) {
+            argv[argc] = new_str(ptr->token_length);
+            strcpy(argv[argc], ptr->token);
+            argv = increment_str_array_size(argv, ++argc);
+            argv[argc] = NULL;
+        }
+
+        if (*ptr->token == '>' || *ptr->token == '&' || !ptr->next) {
+            if (fork() == 0) {
+                free_list(head);
+                free_list(PATH);
+                execv(cmd, argv);
+                exit(0);
+            }
+            else {
+                free(cmd);
+                cmd = NULL;
+                free_str_array(argv, argc);
+                if (*ptr->token == '&') {
+                    ptr = ptr->next;
+                    continue;
+                }
+                else {
+                    break;
+                }
+            }
+        }
+        /*else {
+            argv[argc] = new_str(ptr->token_length);
+            strcpy(argv[argc], ptr->token);
+            argv = increment_str_array_size(argv, ++argc);
+            argv[argc] = NULL;
+        }*/
+        ptr = ptr->next;
+    }
+    while((wait(NULL)) > 0);
+}
 
 bool check_valid_redirection(Token* head) {
     Token* ptr = head;
@@ -346,6 +442,30 @@ void free_list(Token* head) {
     }
 }
 
+char** new_str_array(size_t arr_length) {
+    char** arr = malloc(arr_length * sizeof(char*));
+    if (!arr)
+        on_error(MALLOC_ERR_MSG, true);
+    return arr;
+}
+
+char** increment_str_array_size(char** arr, size_t prev_len) {
+    arr = realloc(arr, prev_len * sizeof(char*) + sizeof(char*));
+    if (!arr) {
+        on_error(MALLOC_ERR_MSG, false);
+        exit_shell(1);
+    }
+    return arr;
+}
+
+void free_str_array(char** arr, size_t len) {
+    int i;
+    for (i = 0; i < len; i++) {
+        free(*(arr + i));
+    }
+    free(arr);
+}
+
 /* Malloc's and returns a ptr to string of size str_length in bytes */
 char* new_str(size_t str_length) {
     char* str = malloc(str_length);
@@ -477,6 +597,7 @@ void interactive_mode() {
             } else {
                 /* Not built-in command */
                 rd = redirect(head);
+                execute_command(head);
             }
             print_list(head); /* Test function */
             restore(rd);
