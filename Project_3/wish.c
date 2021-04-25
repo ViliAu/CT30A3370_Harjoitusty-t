@@ -49,6 +49,7 @@ bool check_multiple_redirs(char*, size_t);
 bool check_repeating_ampersands(char*, size_t);
 Token* new_redirect_token();
 void exit_shell(bool);
+bool check_parallel_built_ins(Token*);
 
 Token* PATH = NULL;
 
@@ -64,6 +65,26 @@ void print_list(Token* head) {
     }
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
+
+/* Checks if built-in commands are tried to run in parallel */
+bool check_parallel_built_ins(Token* head) {
+    bool found_ampersand = false, found_built_in = false;
+    Token* ptr = head;
+    while (ptr) {
+        if (*ptr->token == '>')      
+            break;
+        else if (*ptr->token == '&')
+            found_ampersand = true;
+        else if (ptr->token_length == 2 && strcmp(ptr->token, BUILT_IN_CD) == 0)
+            found_built_in = true;
+        else if (ptr->token_length == 4 && (strcmp(ptr->token, BUILT_IN_PATH) == 0 || strcmp(ptr->token, BUILT_IN_EXIT) == 0))
+            found_built_in = true;
+        if (found_built_in && found_ampersand)
+            return false;
+        ptr = ptr->next;
+    }
+    return true;
+}
 
 void exit_shell(bool erroneous_exit) {
     if (PATH)
