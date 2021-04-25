@@ -84,7 +84,7 @@ bool check_valid_redirection(Token* head) {
     Token* ptr = head;
     while (ptr) {
         if (strcmp(ptr->token, ">") == 0)
-            return !ptr->next->next;
+            return ptr->next && !ptr->next->next;
         ptr = ptr->next;
     }
     return true;
@@ -167,7 +167,7 @@ bool validate_input(char* input, Token** head) {
     if (*head == NULL) return false;
     if (*(*head)->token == '>' || *(*head)->token == '&') return false;
     if (!check_parallel_built_ins(*head)) return false;
-    if (!check_valid_redirection(head)) return false;
+    if (!check_valid_redirection(*head)) return false;
     return true;
 }
 
