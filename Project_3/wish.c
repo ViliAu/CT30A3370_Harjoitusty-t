@@ -10,6 +10,7 @@ Sources: -
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/wait.h>
 
 #define PROMPT "wish>"
 
@@ -23,6 +24,7 @@ Sources: -
 #define CD_ERR_MSG "Chdir failed\n"
 #define EXIT_ERR_MSG "It is an error to pass any arguments to exit\n"
 #define FLUSH_ERR_MSG "Flushing stdout/stderr failed\n"
+#define CMD_NOT_FOUND "Command not found\n"
 
 #define BUILT_IN_EXIT "exit" 
 #define BUILT_IN_PATH "path"
@@ -62,6 +64,11 @@ void built_in_path(Token*);
 bool check_valid_redirection(Token*);
 Redir_Data* redirect(Token*);
 void restore(Redir_Data*);
+void execute_command(Token*);
+char* check_access(char*);
+char** new_str_array(size_t);
+char** increment_str_array_size(char**, size_t);
+void free_str_array(char**, size_t);
 
 Token* PATH = NULL;
 
@@ -87,7 +94,96 @@ void print_path() {
     }
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
+/* check the search path for a given command */
+char* check_access(char* cmd) {
+    char* path;
+    Token* ptr = PATH;
+    while (ptr) {
+        path = malloc(strlen(cmd)+ptr->token_length);
+        *path = '\0';
+        strcat(path, ptr->token);
+        strcat(path, cmd);
+        if (access(path, X_OK) == 0) {
+            return path;
+        }
+        free(path);
+        ptr = ptr->next;
+    }
+    return NULL;
+}
 
+void execute_command(Token* head) {
+    if (!PATH) {
+        return;
+    }
+    Token* ptr = head;
+    int argc = 0;
+    char** argv = NULL;
+    char* cmd = NULL;
+    bool lwc;
+    while (ptr) {
+        lwc = false;
+        /* command is always the first token, if it hasn't been found set it */
+        if (!cmd) {
+            cmd = check_access(ptr->token);
+            /* if command not found => scroll to the next & -symbol */
+            if (!cmd) {
+                on_error(CMD_NOT_FOUND, false);
+                while (*ptr->token != '&' && ptr->next) {
+                    ptr = ptr->next;
+                }
+                ptr = ptr->next;
+                continue;
+            }
+            lwc = true;
+            argc = 0;
+            argv = new_str_array(1);
+            argv[argc] = new_str(strlen(cmd)+1);
+            strcpy(argv[argc], cmd);
+            argc++;
+            argv = increment_str_array_size(argv, argc);
+            argv[argc] = NULL;
+            if (ptr->next) {
+                ptr = ptr->next;
+                continue;
+            }
+        }
+        /* include arguments if they were given */
+        if (*ptr->token != '>' && *ptr->token != '&' && !lwc) {
+            argv[argc] = new_str(ptr->token_length);
+            strcpy(argv[argc], ptr->token);
+            argv = increment_str_array_size(argv, ++argc);
+            argv[argc] = NULL;
+        }
+        /* execute command with its arguments */
+        if (*ptr->token == '>' || *ptr->token == '&' || !ptr->next) {
+            if (fork() == 0) {
+                /* child process has separate address space => release resources*/
+                free_list(head);
+                free_list(PATH);
+                execv(cmd, argv);
+                exit(0);
+            }
+            else {
+                /* parent process releases resources and checks if parallel commands exist */
+                free(cmd);
+                cmd = NULL;
+                free_str_array(argv, argc);
+                if (*ptr->token == '&') {
+                    ptr = ptr->next;
+                    continue;
+                }
+                else {
+                    break;
+                }
+            }
+        }
+        ptr = ptr->next;
+    }
+    /* wait for all child processes to finish */
+    while((wait(NULL)) > 0);
+}
+/* checks that after redir symbol only one filename */
 bool check_valid_redirection(Token* head) {
     Token* ptr = head;
     while (ptr) {
@@ -305,7 +401,7 @@ Redir_Data* redirect(Token* head) {
     dup2(fileno(rd->fs), fileno(stderr));
     return rd;
 }
-
+/* restores stdout and stderr after they have been redirected to a file */
 void restore(Redir_Data* rd) {
     if (!rd)
         return;
@@ -344,6 +440,30 @@ void free_list(Token* head) {
         free(head->token);
         free(head);
     }
+}
+
+char** new_str_array(size_t arr_length) {
+    char** arr = malloc(arr_length * sizeof(char*));
+    if (!arr)
+        on_error(MALLOC_ERR_MSG, true);
+    return arr;
+}
+
+char** increment_str_array_size(char** arr, size_t prev_len) {
+    arr = realloc(arr, prev_len * sizeof(char*) + sizeof(char*));
+    if (!arr) {
+        on_error(MALLOC_ERR_MSG, false);
+        exit_shell(1);
+    }
+    return arr;
+}
+
+void free_str_array(char** arr, size_t len) {
+    int i;
+    for (i = 0; i < len; i++) {
+        free(*(arr + i));
+    }
+    free(arr);
 }
 
 /* Malloc's and returns a ptr to string of size str_length in bytes */
@@ -472,13 +592,11 @@ void interactive_mode() {
                 built_in_path(head);
             } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
                 built_in_cd(head);
-            } else if (strcmp(head->token, "printti") == 0) {
-                print_path();
             } else {
                 /* Not built-in command */
                 rd = redirect(head);
+                execute_command(head);
             }
-            print_list(head); /* Test function */
             restore(rd);
         } else {
             on_error(INV_INPUT_ERR_MSG, false);
@@ -496,12 +614,33 @@ void batch_mode(char* batch_file) {
     FILE* fp = open_file(batch_file, "r");
     Token* head = NULL;
     char* line = NULL;
+    Redir_Data* rd;
     while (get_line(&line, fp)) {
+        if (fflush(stdout) == EOF) {
+            on_error(FLUSH_ERR_MSG, false);
+        }
+        if (fflush(stderr) == EOF) {
+            on_error(FLUSH_ERR_MSG, false);
+        }
+        rd = NULL;
         if (validate_input(line, &head)) {
-            print_list(head); /* Test function */
+            /* Built-in commands must always be the first token in input
+            because parallel built-ins are not allowed */
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
-                break;
+                if (head->next)
+                    on_error(EXIT_ERR_MSG, false);
+                else
+                    break;
+            } else if (strcmp(head->token, BUILT_IN_PATH) == 0) {
+                built_in_path(head);
+            } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
+                built_in_cd(head);
+            } else {
+                /* Not built-in command */
+                rd = redirect(head);
+                execute_command(head);
             }
+            restore(rd);
         } else {
             /* Bad batch file, don't continue execution */
             on_error(BAD_BATCH_ERR_MSG, false);
