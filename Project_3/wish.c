@@ -75,9 +75,9 @@ bool check_parallel_built_ins(Token* head) {
             break;
         else if (*ptr->token == '&')
             found_ampersand = true;
-        else if (ptr->token_length == 2 && strcmp(ptr->token, BUILT_IN_CD) == 0)
+        else if (ptr->token_length == 3 && strcmp(ptr->token, BUILT_IN_CD) == 0)
             found_built_in = true;
-        else if (ptr->token_length == 4 && (strcmp(ptr->token, BUILT_IN_PATH) == 0 || strcmp(ptr->token, BUILT_IN_EXIT) == 0))
+        else if (ptr->token_length == 5 && (strcmp(ptr->token, BUILT_IN_PATH) == 0 || strcmp(ptr->token, BUILT_IN_EXIT) == 0))
             found_built_in = true;
         if (found_built_in && found_ampersand)
             return false;
@@ -142,6 +142,7 @@ bool validate_input(char* input, Token** head) {
     }
     if (*head == NULL) return false;
     if (*(*head)->token == '>') return false;
+    if (!check_parallel_built_ins(*head)) return false;
     return true;
 }
 
@@ -349,11 +350,19 @@ void interactive_mode() {
         /* In either mode, if you hit the end-of-file marker (EOF), 
         you should call exit(0) and exit gracefully. */
         if (!get_line(&line, stdin)) exit_shell(0);
-        /* validate user input */
+        /* Validate user input */
         if (validate_input(line, &head)) {
             print_list(head); /* Test function */
+            /* Built-in commands must always be the first token in input
+            because parallel built-ins are not allowed */
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
                 break;
+            } else if (strcmp(head->token, BUILT_IN_PATH) == 0) {
+                
+            } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
+
+            } else {
+                /* Not built-in command */
             }
         } else {
             on_error(INV_INPUT_ERR_MSG, false);
