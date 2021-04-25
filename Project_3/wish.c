@@ -45,6 +45,7 @@ void add_token(Token**, Token*);
 bool supported_by_ascii(int);
 bool check_multiple_redirs(char*, size_t);
 bool check_repeating_ampersands(char*, size_t);
+Token* new_redirect_token();
 
 /* ****************************** TEST FUNCTIONS ****************************** */
 /* For test purposes only */
@@ -93,10 +94,22 @@ bool validate_input(char* input, Token** head) {
     if (!input) return false;
     size_t input_length = strlen(input);
     if (input_length == 0) return false;
+    /* Only allowed to have one > -symbol per command */
     if (check_multiple_redirs(input, input_length)) return false;
+    /* Only allowed to have one repeating & -symbol per command */
     if (check_repeating_ampersands(input, input_length)) return false;
-    tokenize(head, input);
+    char* left_token = strtok(input, ">"), *right_token = strtok(NULL, ">");
+    if (!left_token) return false;
+    if (right_token) {
+        tokenize(head, left_token);
+        if (*head == NULL) return false;
+        add_token(head, new_redirect_token());
+        tokenize(head, right_token);
+    } else {
+        tokenize(head, input);
+    }
     if (*head == NULL) return false;
+    if (*(*head)->token == '>') return false;
     return true;
 }
 
@@ -110,6 +123,15 @@ Token* new_ampersand_token() {
     tok->token = new_str(2);
     tok->token_length = 2;
     strcpy(tok->token, "&\0");
+    return tok;
+}
+
+/* Returns a token with >\0 as its default token property */
+Token* new_redirect_token() {
+    Token* tok = new_token();
+    tok->token = new_str(2);
+    tok->token_length = 2;
+    strcpy(tok->token, ">\0");
     return tok;
 }
 
@@ -142,7 +164,7 @@ void tokenize(Token** head, char* line) {
     size_t line_length = strlen(line), i = 0, j;
     char* temp_tok;
     bool token_found;
-    for (; i < (line_length - 1); i++) {
+    for (; i < line_length; i++) {
         token_found = false;
         j = 0;
         if (!supported_by_ascii(*(line + i))) {
@@ -168,6 +190,16 @@ void tokenize(Token** head, char* line) {
             Token* token;
             if ((token = tokenize_further(&temp_tok, (j + 1)))) {
                 add_token(head, token);
+                Token* ptr = *head;
+                while (ptr->next) {
+                    if (*ptr->token == '&' && *ptr->next->token == '&') {
+                        free_list(*head);
+                        free(temp_tok);
+                        *head = NULL;
+                        return;
+                    }
+                    ptr = ptr->next;
+                }
             } else {
                 token = new_token();
                 token->token = new_str(j + 1);
