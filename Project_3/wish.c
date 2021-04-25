@@ -24,6 +24,7 @@ Sources: -
 #define CD_ERR_MSG "Chdir failed\n"
 #define EXIT_ERR_MSG "It is an error to pass any arguments to exit\n"
 #define FLUSH_ERR_MSG "Flushing stdout/stderr failed\n"
+#define CMD_NOT_FOUND "Command not found\n"
 
 #define BUILT_IN_EXIT "exit" 
 #define BUILT_IN_PATH "path"
@@ -126,6 +127,7 @@ void execute_command(Token* head) {
             cmd = check_access(ptr->token);
             /* if command not found => scroll to the next & -symbol */
             if (!cmd) {
+                on_error(CMD_NOT_FOUND, false);
                 while (*ptr->token != '&' && ptr->next) {
                     ptr = ptr->next;
                 }
@@ -173,12 +175,6 @@ void execute_command(Token* head) {
                 }
             }
         }
-        /*else {
-            argv[argc] = new_str(ptr->token_length);
-            strcpy(argv[argc], ptr->token);
-            argv = increment_str_array_size(argv, ++argc);
-            argv[argc] = NULL;
-        }*/
         ptr = ptr->next;
     }
     while((wait(NULL)) > 0);
