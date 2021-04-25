@@ -53,6 +53,7 @@ Token* new_redirect_token();
 void exit_shell(bool);
 bool check_parallel_built_ins(Token*);
 void built_in_path(Token*);
+bool check_valid_redirection(Token*);
 
 Token* PATH = NULL;
 
@@ -78,6 +79,16 @@ void print_path() {
     }
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
+
+bool check_valid_redirection(Token* head) {
+    Token* ptr = head;
+    while (ptr) {
+        if (strcmp(ptr->token, ">") == 0)
+            return !ptr->next->next;
+        ptr = ptr->next;
+    }
+    return true;
+}
 
 /* Checks if built-in commands are tried to run in parallel */
 bool check_parallel_built_ins(Token* head) {
@@ -156,6 +167,7 @@ bool validate_input(char* input, Token** head) {
     if (*head == NULL) return false;
     if (*(*head)->token == '>' || *(*head)->token == '&') return false;
     if (!check_parallel_built_ins(*head)) return false;
+    if (!check_valid_redirection(head)) return false;
     return true;
 }
 
