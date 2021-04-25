@@ -94,7 +94,7 @@ void print_path() {
     }
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
-
+/* check the search path for a given command */
 char* check_access(char* cmd) {
     char* path;
     Token* ptr = PATH;
@@ -123,6 +123,7 @@ void execute_command(Token* head) {
     bool lwc;
     while (ptr) {
         lwc = false;
+        /* command is always the first token, if it hasn't been found set it */
         if (!cmd) {
             cmd = check_access(ptr->token);
             /* if command not found => scroll to the next & -symbol */
@@ -147,22 +148,24 @@ void execute_command(Token* head) {
                 continue;
             }
         }
-
+        /* include arguments if they were given */
         if (*ptr->token != '>' && *ptr->token != '&' && !lwc) {
             argv[argc] = new_str(ptr->token_length);
             strcpy(argv[argc], ptr->token);
             argv = increment_str_array_size(argv, ++argc);
             argv[argc] = NULL;
         }
-
+        /* execute command with its arguments */
         if (*ptr->token == '>' || *ptr->token == '&' || !ptr->next) {
             if (fork() == 0) {
+                /* child process has separate address space => release resources*/
                 free_list(head);
                 free_list(PATH);
                 execv(cmd, argv);
                 exit(0);
             }
             else {
+                /* parent process releases resources and checks if parallel commands exist */
                 free(cmd);
                 cmd = NULL;
                 free_str_array(argv, argc);
@@ -177,9 +180,10 @@ void execute_command(Token* head) {
         }
         ptr = ptr->next;
     }
+    /* wait for all child processes to finish */
     while((wait(NULL)) > 0);
 }
-
+/* checks that after redir symbol only one filename */
 bool check_valid_redirection(Token* head) {
     Token* ptr = head;
     while (ptr) {
@@ -397,7 +401,7 @@ Redir_Data* redirect(Token* head) {
     dup2(fileno(rd->fs), fileno(stderr));
     return rd;
 }
-
+/* restores stdout and stderr after they have been redirected to a file */
 void restore(Redir_Data* rd) {
     if (!rd)
         return;
@@ -620,7 +624,6 @@ void batch_mode(char* batch_file) {
         }
         rd = NULL;
         if (validate_input(line, &head)) {
-            
             /* Built-in commands must always be the first token in input
             because parallel built-ins are not allowed */
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
