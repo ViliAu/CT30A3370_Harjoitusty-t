@@ -33,6 +33,11 @@ struct Token {
     struct Token* next;
 } typedef Token;
 
+struct Redir_Data {
+    int stdout_fileno, stderr_fileno;
+    FILE* fs;
+} typedef Redir_Data;
+
 void on_error(char*, bool);
 bool get_line(char**, FILE*);
 void interactive_mode();
@@ -54,6 +59,8 @@ void exit_shell(bool);
 bool check_parallel_built_ins(Token*);
 void built_in_path(Token*);
 bool check_valid_redirection(Token*);
+Redir_Data* redirect(Token*);
+void restore(Redir_Data*);
 
 Token* PATH = NULL;
 
@@ -65,7 +72,7 @@ void print_path();
 void print_list(Token* head) {
     Token* ptr = head;
     while (ptr) {
-        printf("token: %s, token_length: %ld\n", ptr->token, ptr->token_length);
+        fprintf(stdout, "token: %s, token_length: %ld\n", ptr->token, ptr->token_length);
         ptr = ptr->next;
     }
 }
@@ -73,7 +80,7 @@ void print_path() {
     if (PATH) {
         Token* ptr = PATH;
         while (ptr) {
-            printf("path: %s, len: %ld\n", ptr->token, ptr->token_length);
+            fprintf(stdout, "path: %s, len: %ld\n", ptr->token, ptr->token_length);
             ptr = ptr->next;
         }
     }
@@ -272,6 +279,43 @@ void tokenize(Token** head, char* line) {
     }
 }
 
+/* Redirects the stdout and stderr stream to a user specified file */
+Redir_Data* redirect(Token* head) {
+    char* file_name = NULL;
+    Token* ptr = head;
+    while (ptr) {
+        if (*ptr->token == '>' && ptr->next) {
+            file_name = ptr->next->token;
+            break;
+        }
+        ptr = ptr->next;
+    }
+    if (!file_name)
+        return NULL;
+    Redir_Data* rd;
+    if ((rd = malloc(sizeof(Redir_Data))) == NULL) {
+        free_list(head);
+        on_error(MALLOC_ERR_MSG, true);
+    }
+    rd->fs = open_file(file_name, "w");
+    rd->stdout_fileno = dup(fileno(stdout));
+    rd->stderr_fileno = dup(fileno(stderr));
+    dup2(fileno(rd->fs), fileno(stdout));
+    dup2(fileno(rd->fs), fileno(stderr));
+    return rd;
+}
+
+void restore(Redir_Data* rd) {
+    if (!rd)
+        return;
+    fflush(stdout);
+    fflush(stderr);
+    fclose(rd->fs);
+    dup2(rd->stdout_fileno, fileno(stdout));
+    dup2(rd->stderr_fileno, fileno(stderr));
+    free(rd);
+}
+
 /* ****************************** DYNAMIC MEMORY RELATED FUNCTIONS ****************************** */
 
 /* Returns a new token with default initialized values */
@@ -394,17 +438,18 @@ void built_in_cd(Token* head) {
 
 void interactive_mode() {
     char* line;
-    Token* head = NULL;
+    Token* head;
+    Redir_Data* rd;
     while (true) {
         write(STDOUT_FILENO, PROMPT, strlen(PROMPT));
         head = NULL;
         line = NULL;
+        rd = NULL;
         /* In either mode, if you hit the end-of-file marker (EOF), 
         you should call exit(0) and exit gracefully. */
         if (!get_line(&line, stdin)) exit_shell(0);
         /* Validate user input */
         if (validate_input(line, &head)) {
-            print_list(head); /* Test function */
             /* Built-in commands must always be the first token in input
             because parallel built-ins are not allowed */
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
@@ -420,7 +465,10 @@ void interactive_mode() {
                 print_path();
             } else {
                 /* Not built-in command */
+                rd = redirect(head);
             }
+            print_list(head); /* Test function */
+            restore(rd);
         } else {
             on_error(INV_INPUT_ERR_MSG, false);
         }
