@@ -1,6 +1,6 @@
 /*
 Authors: Jani Heinikoski, Vili Huusko
-Last modified: 24.04.2021
+Last modified: 25.04.2021
 Sources: -
 */
 #define _GNU_SOURCE
@@ -22,6 +22,8 @@ Sources: -
 #define MALLOC_ERR_MSG "Failed to allocate memory\n"
 
 #define BUILT_IN_EXIT "exit" 
+#define BUILT_IN_PATH "path"
+#define BUILT_IN_CD "cd"
 
 struct Token {
     char* token;
@@ -46,6 +48,9 @@ bool supported_by_ascii(int);
 bool check_multiple_redirs(char*, size_t);
 bool check_repeating_ampersands(char*, size_t);
 Token* new_redirect_token();
+void exit_shell(bool);
+
+Token* PATH = NULL;
 
 /* ****************************** TEST FUNCTIONS ****************************** */
 /* For test purposes only */
@@ -60,13 +65,19 @@ void print_list(Token* head) {
 }
 /* ****************************** UTILITY FUNCTIONS ****************************** */
 
+void exit_shell(bool erroneous_exit) {
+    if (PATH)
+        free_list(PATH);
+    exit(erroneous_exit);
+}
+
 /* Called whenever an error is detected, prints default err msg and arg error_message to stderr */
 void on_error(char* error_message, bool exit_after) {
     write(STDERR_FILENO, STD_ERR_MSG, strlen(STD_ERR_MSG));
     if (error_message) {
         write(STDERR_FILENO, error_message, strlen(error_message));
     }
-    if (exit_after) exit(1);
+    if (exit_after) exit_shell(1);
 }
 
 bool check_multiple_redirs(char* input, size_t input_length) {
@@ -167,6 +178,7 @@ void tokenize(Token** head, char* line) {
     for (; i < line_length; i++) {
         token_found = false;
         j = 0;
+        /* Only 7-bit ascii-characters are supported  */
         if (!supported_by_ascii(*(line + i))) {
             free_list(*head);
             *head = NULL;
@@ -175,6 +187,7 @@ void tokenize(Token** head, char* line) {
         temp_tok = new_str(1);
         *temp_tok = '\0';
         while (i <= line_length && *(line + i) != ' ' && *(line + i) != '\t' && *(line + i) != '\n' && *(line + i) != '\0') {
+            /* Only 7-bit ascii-characters are supported  */
             if (!supported_by_ascii(*(line + i))) {
                 free_list(*head);
                 free(temp_tok);
@@ -242,7 +255,7 @@ char* new_str(size_t str_length) {
     char* str = malloc(str_length);
     if (!str) {
         on_error(MALLOC_ERR_MSG, false);
-        exit(1);
+        exit_shell(1);
     }
     return str;
 }
@@ -253,7 +266,7 @@ void increment_str_size(char** str) {
     *str = realloc(*str, new_size);
     if (!(*str)) {
         on_error(MALLOC_ERR_MSG, false);
-        exit(1);
+        exit_shell(1);
     }
 }
 
@@ -295,7 +308,7 @@ bool get_line(char** line, FILE* input_stream) {
              According to man pages, *line should be free'd anyway. */
             on_error(GET_LINE_ERR_MSG, false);
             free(*line);
-            exit(1);
+            exit_shell(1);
         }
         free(*line);
         return false;
@@ -314,7 +327,7 @@ void interactive_mode() {
         line = NULL;
         /* In either mode, if you hit the end-of-file marker (EOF), 
         you should call exit(0) and exit gracefully. */
-        if (!get_line(&line, stdin)) exit(0);
+        if (!get_line(&line, stdin)) exit_shell(0);
         /* validate user input */
         if (validate_input(line, &head)) {
             print_list(head); /* Test function */
@@ -330,6 +343,7 @@ void interactive_mode() {
     }
     free(line);
     free_list(head);
+    exit_shell(0);
 }
 
 void batch_mode(char* batch_file) {
@@ -357,10 +371,14 @@ void batch_mode(char* batch_file) {
     fclose(fp);
     /* In either mode, if you hit the end-of-file marker (EOF), 
     you should call exit(0) and exit gracefully. */
-    exit(0);
+    exit_shell(0);
 }
 
 int main(int argc, char** argv) {
+    add_token(&PATH, new_token());
+    PATH->token = new_str(5);
+    strcpy(PATH->token, "/bin");
+    PATH->token_length = 5;
     switch(argc) {
         case 1:
             interactive_mode();
@@ -370,7 +388,7 @@ int main(int argc, char** argv) {
             break;
         default:
             on_error(INV_ARGS_ERR_MSG, true);
-            exit(1);
+            exit_shell(1);
     }
     return 0;
 }
