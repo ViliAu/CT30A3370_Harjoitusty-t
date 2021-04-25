@@ -22,6 +22,7 @@ Sources: -
 #define MALLOC_ERR_MSG "Failed to allocate memory\n"
 #define CD_ERR_MSG "Chdir failed\n"
 #define EXIT_ERR_MSG "It is an error to pass any arguments to exit\n"
+#define FLUSH_ERR_MSG "Flushing stdout/stderr failed\n"
 
 #define BUILT_IN_EXIT "exit" 
 #define BUILT_IN_PATH "path"
@@ -308,8 +309,12 @@ Redir_Data* redirect(Token* head) {
 void restore(Redir_Data* rd) {
     if (!rd)
         return;
-    fflush(stdout);
-    fflush(stderr);
+    if (fflush(stdout) == EOF) {
+        on_error(FLUSH_ERR_MSG, false);
+    }
+    if (fflush(stderr) == EOF) {
+        on_error(FLUSH_ERR_MSG, false);
+    }
     fclose(rd->fs);
     dup2(rd->stdout_fileno, fileno(stdout));
     dup2(rd->stderr_fileno, fileno(stderr));
@@ -441,6 +446,12 @@ void interactive_mode() {
     Token* head;
     Redir_Data* rd;
     while (true) {
+        if (fflush(stdout) == EOF) {
+            on_error(FLUSH_ERR_MSG, false);
+        }
+        if (fflush(stderr) == EOF) {
+            on_error(FLUSH_ERR_MSG, false);
+        }
         write(STDOUT_FILENO, PROMPT, strlen(PROMPT));
         head = NULL;
         line = NULL;
