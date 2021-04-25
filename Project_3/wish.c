@@ -588,14 +588,11 @@ void interactive_mode() {
                 built_in_path(head);
             } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
                 built_in_cd(head);
-            } else if (strcmp(head->token, "printti") == 0) {
-                print_path();
             } else {
                 /* Not built-in command */
                 rd = redirect(head);
                 execute_command(head);
             }
-            print_list(head); /* Test function */
             restore(rd);
         } else {
             on_error(INV_INPUT_ERR_MSG, false);
@@ -613,12 +610,34 @@ void batch_mode(char* batch_file) {
     FILE* fp = open_file(batch_file, "r");
     Token* head = NULL;
     char* line = NULL;
+    Redir_Data* rd;
     while (get_line(&line, fp)) {
+        if (fflush(stdout) == EOF) {
+            on_error(FLUSH_ERR_MSG, false);
+        }
+        if (fflush(stderr) == EOF) {
+            on_error(FLUSH_ERR_MSG, false);
+        }
+        rd = NULL;
         if (validate_input(line, &head)) {
-            print_list(head); /* Test function */
+            
+            /* Built-in commands must always be the first token in input
+            because parallel built-ins are not allowed */
             if (strcmp(head->token, BUILT_IN_EXIT) == 0) {
-                break;
+                if (head->next)
+                    on_error(EXIT_ERR_MSG, false);
+                else
+                    break;
+            } else if (strcmp(head->token, BUILT_IN_PATH) == 0) {
+                built_in_path(head);
+            } else if (strcmp(head->token, BUILT_IN_CD) == 0) {
+                built_in_cd(head);
+            } else {
+                /* Not built-in command */
+                rd = redirect(head);
+                execute_command(head);
             }
+            restore(rd);
         } else {
             /* Bad batch file, don't continue execution */
             on_error(BAD_BATCH_ERR_MSG, false);
